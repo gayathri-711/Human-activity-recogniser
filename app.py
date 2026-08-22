@@ -1,4 +1,15 @@
+import os
+
+# ============================================
+# CPU OPTIMIZATION
+# ============================================
+
+os.environ["OMP_NUM_THREADS"] = "2"
+os.environ["MKL_NUM_THREADS"] = "2"
+
 from pathlib import Path
+import time
+
 import cv2
 import numpy as np
 
@@ -6,6 +17,7 @@ from fastapi import FastAPI, File, UploadFile, Form, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+
 from ultralytics import YOLO
 
 
@@ -14,6 +26,7 @@ from ultralytics import YOLO
 # ============================================================
 
 BASE_DIR = Path(__file__).resolve().parent
+
 MODEL_PATH = BASE_DIR / "yolo11n-pose.pt"
 
 
@@ -23,7 +36,7 @@ MODEL_PATH = BASE_DIR / "yolo11n-pose.pt"
 
 app = FastAPI(
     title="AI Human Activity Recognition",
-    version="4.0.0"
+    version="5.0.0"
 )
 
 
@@ -41,7 +54,7 @@ app.mount(
 
 
 # ============================================================
-# TEMPLATES
+# HTML TEMPLATES
 # ============================================================
 
 templates = Jinja2Templates(
@@ -50,37 +63,7 @@ templates = Jinja2Templates(
 
 
 # ============================================================
-# LOAD YOLO POSE MODEL
-# ============================================================
-
-model = None
-
-try:
-
-    if MODEL_PATH.exists():
-
-        model = YOLO(str(MODEL_PATH))
-
-        print("=" * 60)
-        print("YOLO11 POSE MODEL LOADED")
-        print(f"Model: {MODEL_PATH}")
-        print("=" * 60)
-
-    else:
-
-        print("=" * 60)
-        print("WARNING: YOLO MODEL NOT FOUND")
-        print(f"Expected: {MODEL_PATH}")
-        print("=" * 60)
-
-except Exception as error:
-
-    print("ERROR LOADING YOLO MODEL:")
-    print(error)
-
-
-# ============================================================
-# EXERCISES
+# EXERCISE NAMES
 # ============================================================
 
 EXERCISE_NAMES = {
@@ -91,10 +74,57 @@ EXERCISE_NAMES = {
 
 
 # ============================================================
-# HOME
+# LOAD YOLO MODEL ONCE
 # ============================================================
 
-@app.get("/", response_class=HTMLResponse)
+model = None
+
+try:
+
+    if MODEL_PATH.exists():
+
+        print("=" * 60)
+        print("LOADING YOLO11 POSE MODEL")
+        print("=" * 60)
+
+        model = YOLO(
+            str(MODEL_PATH)
+        )
+
+        # Force CPU for Render
+        try:
+            model.to("cpu")
+        except Exception:
+            pass
+
+        print("YOLO11 POSE MODEL LOADED")
+        print("Device: CPU")
+        print(f"Model: {MODEL_PATH}")
+        print("=" * 60)
+
+    else:
+
+        print("=" * 60)
+        print("ERROR: YOLO MODEL NOT FOUND")
+        print(f"Expected file: {MODEL_PATH}")
+        print("=" * 60)
+
+except Exception as error:
+
+    print("=" * 60)
+    print("ERROR LOADING YOLO MODEL")
+    print(error)
+    print("=" * 60)
+
+
+# ============================================================
+# HOME PAGE
+# ============================================================
+
+@app.get(
+    "/",
+    response_class=HTMLResponse
+)
 async def home(request: Request):
 
     return templates.TemplateResponse(
@@ -105,7 +135,7 @@ async def home(request: Request):
 
 
 # ============================================================
-# HEALTH
+# HEALTH CHECK
 # ============================================================
 
 @app.get("/health")
@@ -122,7 +152,10 @@ async def health():
 # GET KEYPOINT
 # ============================================================
 
-def get_point(keypoints, index):
+def get_point(
+    keypoints,
+    index
+):
 
     try:
 
@@ -154,7 +187,10 @@ def get_point(keypoints, index):
 # DISTANCE
 # ============================================================
 
-def distance(point_a, point_b):
+def distance(
+    point_a,
+    point_b
+):
 
     try:
 
@@ -216,7 +252,8 @@ def calculate_angle(
             np.dot(ba, bc)
             /
             (
-                magnitude_ba *
+                magnitude_ba
+                *
                 magnitude_bc
             )
         )
@@ -244,28 +281,9 @@ def calculate_angle(
 # ACTIVITY CLASSIFIER
 # ============================================================
 
-def classify_activity(keypoints):
-
-    """
-    Classifies:
-
-        STANDING
-        SITTING
-        SQUATTING
-        LYING DOWN
-        UNKNOWN
-
-    YOLO COCO keypoints:
-
-        5  Left Shoulder
-        6  Right Shoulder
-        11 Left Hip
-        12 Right Hip
-        13 Left Knee
-        14 Right Knee
-        15 Left Ankle
-        16 Right Ankle
-    """
+def classify_activity(
+    keypoints
+):
 
     try:
 
@@ -278,9 +296,20 @@ def classify_activity(keypoints):
             return "UNKNOWN", 0
 
 
-        # ====================================================
-        # LANDMARKS
-        # ====================================================
+        # ----------------------------------------------------
+        # COCO KEYPOINTS
+        # ----------------------------------------------------
+        #
+        # 5  = Left Shoulder
+        # 6  = Right Shoulder
+        # 11 = Left Hip
+        # 12 = Right Hip
+        # 13 = Left Knee
+        # 14 = Right Knee
+        # 15 = Left Ankle
+        # 16 = Right Ankle
+        #
+        # ----------------------------------------------------
 
         left_shoulder, ls = get_point(
             keypoints,
@@ -323,25 +352,30 @@ def classify_activity(keypoints):
         )
 
 
-        # ====================================================
+        # ----------------------------------------------------
         # CONFIDENCE
-        # ====================================================
+        # ----------------------------------------------------
 
         confidences = [
-            ls, rs,
-            lh, rh,
-            lk, rk,
-            la, ra
+            ls,
+            rs,
+            lh,
+            rh,
+            lk,
+            rk,
+            la,
+            ra
         ]
 
         reliable_points = sum(
-            c >= 0.35
-            for c in confidences
+            confidence >= 0.30
+            for confidence in confidences
         )
 
         if reliable_points < 6:
 
             return "UNKNOWN", 20
+
 
         avg_confidence = (
             sum(confidences)
@@ -350,34 +384,38 @@ def classify_activity(keypoints):
         )
 
 
-        # ====================================================
+        # ----------------------------------------------------
         # BODY CENTERS
-        # ====================================================
+        # ----------------------------------------------------
 
         shoulder = (
-            left_shoulder +
+            left_shoulder
+            +
             right_shoulder
         ) / 2.0
 
         hip = (
-            left_hip +
+            left_hip
+            +
             right_hip
         ) / 2.0
 
         knee = (
-            left_knee +
+            left_knee
+            +
             right_knee
         ) / 2.0
 
         ankle = (
-            left_ankle +
+            left_ankle
+            +
             right_ankle
         ) / 2.0
 
 
-        # ====================================================
+        # ----------------------------------------------------
         # BODY DIMENSIONS
-        # ====================================================
+        # ----------------------------------------------------
 
         torso_length = distance(
             shoulder,
@@ -394,9 +432,10 @@ def classify_activity(keypoints):
             right_shoulder
         )
 
-        if torso_length < 10:
+        if torso_length < 5:
 
             return "UNKNOWN", 20
+
 
         scale = max(
             torso_length,
@@ -405,12 +444,21 @@ def classify_activity(keypoints):
         )
 
 
-        # ====================================================
+        # ----------------------------------------------------
         # TORSO ORIENTATION
-        # ====================================================
+        # ----------------------------------------------------
 
-        dx = hip[0] - shoulder[0]
-        dy = hip[1] - shoulder[1]
+        dx = (
+            hip[0]
+            -
+            shoulder[0]
+        )
+
+        dy = (
+            hip[1]
+            -
+            shoulder[1]
+        )
 
         torso_angle = abs(
             np.degrees(
@@ -427,9 +475,9 @@ def classify_activity(keypoints):
         )
 
 
-        # ====================================================
+        # ----------------------------------------------------
         # KNEE ANGLES
-        # ====================================================
+        # ----------------------------------------------------
 
         left_knee_angle = calculate_angle(
             left_hip,
@@ -463,9 +511,9 @@ def classify_activity(keypoints):
         )
 
 
-        # ====================================================
+        # ----------------------------------------------------
         # HIP ANGLES
-        # ====================================================
+        # ----------------------------------------------------
 
         left_hip_angle = calculate_angle(
             left_shoulder,
@@ -497,31 +545,43 @@ def classify_activity(keypoints):
         )
 
 
-        # ====================================================
+        # ----------------------------------------------------
         # NORMALIZED FEATURES
-        # ====================================================
+        # ----------------------------------------------------
 
         hip_knee_vertical = (
-            abs(hip[1] - knee[1])
+            abs(
+                hip[1]
+                -
+                knee[1]
+            )
             /
             scale
         )
 
         knee_ankle_vertical = (
-            abs(knee[1] - ankle[1])
+            abs(
+                knee[1]
+                -
+                ankle[1]
+            )
             /
             scale
         )
 
         hip_ankle_vertical = (
-            abs(hip[1] - ankle[1])
+            abs(
+                hip[1]
+                -
+                ankle[1]
+            )
             /
             scale
         )
 
 
         # ====================================================
-        # LYING DETECTION
+        # LYING DOWN
         # ====================================================
 
         horizontal_span = (
@@ -581,7 +641,8 @@ def classify_activity(keypoints):
             confidence = min(
                 96,
                 int(
-                    60 +
+                    60
+                    +
                     avg_confidence * 35
                 )
             )
@@ -598,36 +659,47 @@ def classify_activity(keypoints):
 
         sitting_score = 0
 
-        # Upright torso
+        # Torso is reasonably upright
         if torso_from_horizontal > 55:
             sitting_score += 2
 
-        # Bent knees
-        if 65 <= average_knee_angle <= 140:
+        # Knees bent
+        if (
+            65
+            <=
+            average_knee_angle
+            <=
+            140
+        ):
+
             sitting_score += 2
 
-        # Bent hips
+        # Hips bent
         if (
             average_hip_angle is not None
             and
             average_hip_angle < 145
         ):
+
             sitting_score += 1
 
-        # KEY SITTING FEATURE:
-        # Hip and knee are relatively close vertically.
+        # Hip and knee are vertically close
         if hip_knee_vertical < 0.38:
+
             sitting_score += 3
 
         elif hip_knee_vertical < 0.50:
+
             sitting_score += 1
 
-        # Lower leg exists
+        # Lower leg visible
         if knee_ankle_vertical > 0.15:
+
             sitting_score += 1
 
-        # Body not completely extended
+        # Not fully extended
         if hip_ankle_vertical < 1.15:
+
             sitting_score += 1
 
 
@@ -642,7 +714,8 @@ def classify_activity(keypoints):
             confidence = min(
                 96,
                 int(
-                    58 +
+                    58
+                    +
                     avg_confidence * 38
                 )
             )
@@ -659,7 +732,7 @@ def classify_activity(keypoints):
 
         squat_score = 0
 
-        # Bent knees
+        # Strongly bent knees
         if average_knee_angle < 105:
 
             squat_score += 3
@@ -673,18 +746,17 @@ def classify_activity(keypoints):
             squat_score += 1
 
 
-        # Torso not horizontal
+        # Torso is not horizontal
         if torso_from_horizontal > 50:
 
             squat_score += 1
 
 
-        # ====================================================
-        # IMPORTANT DIFFERENCE FROM SITTING
-        # ====================================================
-
+        # Hip above knee
         hip_above_knee = (
-            hip[1] < knee[1]
+            hip[1]
+            <
+            knee[1]
         )
 
 
@@ -728,7 +800,8 @@ def classify_activity(keypoints):
             confidence = min(
                 95,
                 int(
-                    55 +
+                    55
+                    +
                     avg_confidence * 40
                 )
             )
@@ -777,7 +850,7 @@ def classify_activity(keypoints):
             standing_score += 1
 
 
-        # Visible lower legs
+        # Lower legs visible
         if knee_ankle_vertical > 0.20:
 
             standing_score += 1
@@ -788,7 +861,8 @@ def classify_activity(keypoints):
             confidence = min(
                 96,
                 int(
-                    60 +
+                    60
+                    +
                     avg_confidence * 35
                 )
             )
@@ -814,7 +888,8 @@ def classify_activity(keypoints):
             confidence = min(
                 88,
                 int(
-                    52 +
+                    52
+                    +
                     avg_confidence * 35
                 )
             )
@@ -825,20 +900,15 @@ def classify_activity(keypoints):
             )
 
 
-        # ====================================================
-        # UNKNOWN
-        # ====================================================
-
         return "UNKNOWN", 30
 
 
     except Exception as error:
 
         print(
-            "ACTIVITY CLASSIFIER ERROR:"
+            "ACTIVITY CLASSIFIER ERROR:",
+            error
         )
-
-        print(error)
 
         return "UNKNOWN", 0
 
@@ -854,10 +924,8 @@ def calculate_exercise_angle(
 
     try:
 
-        # ====================================================
-        # SQUAT
+        # Squat:
         # Left Hip -> Left Knee -> Left Ankle
-        # ====================================================
 
         if exercise == "squat":
 
@@ -868,10 +936,8 @@ def calculate_exercise_angle(
             )
 
 
-        # ====================================================
-        # BICEP CURL
+        # Bicep curl:
         # Left Shoulder -> Left Elbow -> Left Wrist
-        # ====================================================
 
         if exercise == "bicep_curl":
 
@@ -882,10 +948,8 @@ def calculate_exercise_angle(
             )
 
 
-        # ====================================================
-        # SHOULDER PRESS
+        # Shoulder press:
         # Left Hip -> Left Shoulder -> Left Elbow
-        # ====================================================
 
         if exercise == "shoulder_press":
 
@@ -914,20 +978,21 @@ def get_feedback(
     activity
 ):
 
-    # ========================================================
+    # --------------------------------------------------------
     # UNKNOWN
-    # ========================================================
+    # --------------------------------------------------------
 
     if activity == "UNKNOWN":
 
         return (
-            "Make sure your full body is clearly visible."
+            "Make sure your full body is clearly visible "
+            "and stand in front of the camera."
         )
 
 
-    # ========================================================
+    # --------------------------------------------------------
     # LYING
-    # ========================================================
+    # --------------------------------------------------------
 
     if activity == "LYING DOWN":
 
@@ -937,9 +1002,9 @@ def get_feedback(
         )
 
 
-    # ========================================================
+    # --------------------------------------------------------
     # SITTING
-    # ========================================================
+    # --------------------------------------------------------
 
     if activity == "SITTING":
 
@@ -956,9 +1021,9 @@ def get_feedback(
         )
 
 
-    # ========================================================
+    # --------------------------------------------------------
     # SQUAT
-    # ========================================================
+    # --------------------------------------------------------
 
     if exercise == "squat":
 
@@ -992,9 +1057,9 @@ def get_feedback(
             )
 
 
-    # ========================================================
+    # --------------------------------------------------------
     # BICEP CURL
-    # ========================================================
+    # --------------------------------------------------------
 
     if exercise == "bicep_curl":
 
@@ -1022,9 +1087,9 @@ def get_feedback(
         )
 
 
-    # ========================================================
+    # --------------------------------------------------------
     # SHOULDER PRESS
-    # ========================================================
+    # --------------------------------------------------------
 
     if exercise == "shoulder_press":
 
@@ -1057,13 +1122,70 @@ def get_feedback(
 
 
 # ============================================================
-# YOLO PROCESSING
+# RESIZE IMAGE FOR FAST CPU INFERENCE
+# ============================================================
+
+def resize_for_inference(
+    image,
+    max_size=640
+):
+
+    try:
+
+        height, width = image.shape[:2]
+
+        largest_dimension = max(
+            height,
+            width
+        )
+
+        if largest_dimension <= max_size:
+
+            return image
+
+
+        scale = (
+            max_size
+            /
+            largest_dimension
+        )
+
+        new_width = int(
+            width * scale
+        )
+
+        new_height = int(
+            height * scale
+        )
+
+        resized = cv2.resize(
+            image,
+            (
+                new_width,
+                new_height
+            ),
+            interpolation=cv2.INTER_AREA
+        )
+
+        return resized
+
+
+    except Exception:
+
+        return image
+
+
+# ============================================================
+# PROCESS IMAGE
 # ============================================================
 
 def process_image(
     image,
     exercise
 ):
+
+    start_time = time.perf_counter()
+
 
     result_data = {
 
@@ -1088,8 +1210,9 @@ def process_image(
         "feedback":
             "No person detected.",
 
-        "keypoints": []
+        "keypoints": [],
 
+        "processing_time": 0
     }
 
 
@@ -1100,8 +1223,7 @@ def process_image(
     if model is None:
 
         result_data["feedback"] = (
-            "YOLO model is not loaded. "
-            "Make sure yolo11n-pose.pt is present."
+            "YOLO model is not loaded."
         )
 
         return result_data
@@ -1110,23 +1232,46 @@ def process_image(
     try:
 
         # ====================================================
-        # YOLO
+        # RESIZE
+        # ====================================================
+
+        image = resize_for_inference(
+            image,
+            max_size=640
+        )
+
+
+        # ====================================================
+        # YOLO POSE INFERENCE
         # ====================================================
 
         results = model.predict(
 
             source=image,
 
+            imgsz=320,
+
             conf=0.35,
 
             iou=0.45,
 
-            verbose=False
+            device="cpu",
 
+            verbose=False,
+
+            max_det=1
         )
 
 
+        # ====================================================
+        # CHECK RESULT
+        # ====================================================
+
         if not results:
+
+            result_data["feedback"] = (
+                "No person detected."
+            )
 
             return result_data
 
@@ -1155,18 +1300,17 @@ def process_image(
 
 
         # ====================================================
-        # FIRST PERSON
+        # PERSON SELECTION
         # ====================================================
 
         person_index = 0
 
 
         # ====================================================
-        # KEYPOINTS
+        # GET KEYPOINTS
         # ====================================================
 
         person_keypoints = (
-
             result
             .keypoints
             .data[
@@ -1174,7 +1318,6 @@ def process_image(
             ]
             .cpu()
             .numpy()
-
         )
 
 
@@ -1206,7 +1349,6 @@ def process_image(
             if len(result.boxes.conf) > person_index:
 
                 confidence = float(
-
                     result
                     .boxes
                     .conf[
@@ -1214,7 +1356,6 @@ def process_image(
                     ]
                     .cpu()
                     .item()
-
                 )
 
                 result_data["confidence"] = round(
@@ -1236,9 +1377,9 @@ def process_image(
 
         result_data["activity"] = activity
 
-        result_data["activity_confidence"] = (
-            activity_confidence
-        )
+        result_data[
+            "activity_confidence"
+        ] = activity_confidence
 
 
         # ====================================================
@@ -1253,7 +1394,6 @@ def process_image(
             ]
 
             for point in points
-
         ]
 
 
@@ -1281,7 +1421,25 @@ def process_image(
             angle,
 
             activity
+        )
 
+
+        # ====================================================
+        # PROCESSING TIME
+        # ====================================================
+
+        result_data["processing_time"] = round(
+            time.perf_counter()
+            -
+            start_time,
+            3
+        )
+
+
+        print(
+            f"Analysis completed in "
+            f"{result_data['processing_time']} seconds | "
+            f"Activity: {activity}"
         )
 
 
@@ -1300,6 +1458,13 @@ def process_image(
             "Unable to process this image."
         )
 
+        result_data["processing_time"] = round(
+            time.perf_counter()
+            -
+            start_time,
+            3
+        )
+
         return result_data
 
 
@@ -1316,10 +1481,39 @@ async def analyze_image(
 
 ):
 
+    request_start = time.perf_counter()
+
     try:
+
+        # ====================================================
+        # READ IMAGE
+        # ====================================================
 
         image_bytes = await file.read()
 
+
+        if not image_bytes:
+
+            return {
+                "activity": "UNKNOWN",
+                "activity_confidence": 0,
+                "exercise":
+                    EXERCISE_NAMES.get(
+                        exercise,
+                        exercise
+                    ),
+                "confidence": 0,
+                "repetitions": 0,
+                "angle": None,
+                "person_detected": False,
+                "feedback": "Empty image.",
+                "processing_time": 0
+            }
+
+
+        # ====================================================
+        # DECODE IMAGE
+        # ====================================================
 
         image_array = np.frombuffer(
             image_bytes,
@@ -1336,44 +1530,51 @@ async def analyze_image(
         if image is None:
 
             return {
-
                 "activity": "UNKNOWN",
-
                 "activity_confidence": 0,
-
                 "exercise":
                     EXERCISE_NAMES.get(
                         exercise,
                         exercise
                     ),
-
                 "confidence": 0,
-
                 "repetitions": 0,
-
                 "angle": None,
-
                 "person_detected": False,
-
-                "feedback":
-                    "Invalid image."
-
+                "feedback": "Invalid image.",
+                "processing_time": 0
             }
 
 
-        return process_image(
+        # ====================================================
+        # PROCESS
+        # ====================================================
+
+        result = process_image(
             image,
             exercise
         )
 
 
-    except Exception as error:
-
-        print(
-            "IMAGE ANALYSIS ERROR:"
+        result[
+            "total_request_time"
+        ] = round(
+            time.perf_counter()
+            -
+            request_start,
+            3
         )
 
+
+        return result
+
+
+    except Exception as error:
+
+        print("=" * 60)
+        print("IMAGE ANALYSIS ERROR")
         print(error)
+        print("=" * 60)
 
 
         return {
@@ -1397,8 +1598,15 @@ async def analyze_image(
             "person_detected": False,
 
             "feedback":
-                "Unable to analyze image."
+                "Unable to analyze image.",
 
+            "processing_time":
+                round(
+                    time.perf_counter()
+                    -
+                    request_start,
+                    3
+                )
         }
 
 
@@ -1456,7 +1664,6 @@ async def analyze_frame(
 
                 "feedback":
                     "Invalid camera frame."
-
             }
 
 
@@ -1468,11 +1675,10 @@ async def analyze_frame(
 
     except Exception as error:
 
-        print(
-            "FRAME ANALYSIS ERROR:"
-        )
-
+        print("=" * 60)
+        print("FRAME ANALYSIS ERROR")
         print(error)
+        print("=" * 60)
 
 
         return {
@@ -1497,5 +1703,4 @@ async def analyze_frame(
 
             "feedback":
                 "Unable to analyze camera frame."
-
         }
