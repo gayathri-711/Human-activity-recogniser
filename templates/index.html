@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AI Human Activity Recognition</title>
+
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+    <div class="app">
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+
+            <div class="logo">
+                <div class="logo-icon">AI</div>
+
+                <div>
+                    <h2>HAR Vision</h2>
+                    <p>Fitness Intelligence</p>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+
+                <label>EXERCISE</label>
+
+                <select id="exerciseSelect">
+                    <option value="squat">Squat</option>
+                    <option value="bicep_curl">Bicep Curl</option>
+                    <option value="shoulder_press">Shoulder Press</option>
+                </select>
+
+            </div>
+
+            <div class="status-card">
+
+                <span class="status-dot"></span>
+
+                <div>
+                    <strong id="systemStatus">System Ready</strong>
+                    <p>AI Pose Engine</p>
+                </div>
+
+            </div>
+
+            <div class="sidebar-buttons">
+
+                <button id="startCameraBtn" class="primary-btn">
+                    📷 Start Camera
+                </button>
+
+                <button id="stopCameraBtn" class="secondary-btn">
+                    ⏹ Stop Camera
+                </button>
+
+                <label for="imageInput" class="upload-btn">
+                    🖼 Upload Image
+                </label>
+
+                <input
+                    type="file"
+                    id="imageInput"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    hidden
+                >
+
+            </div>
+
+            <div class="instructions">
+
+                <h3>How to use</h3>
+
+                <ol>
+                    <li>Select an exercise.</li>
+                    <li>Start your camera.</li>
+                    <li>Stand where your body is visible.</li>
+                    <li>Perform the exercise.</li>
+                    <li>Watch your repetitions and feedback.</li>
+                </ol>
+
+            </div>
+
+        </aside>
+
+
+        <!-- Main Content -->
+        <main class="main-content">
+
+            <header class="topbar">
+
+                <div>
+                    <h1>AI Human Activity Recognition</h1>
+                    <p>
+                        Real-time pose analysis and fitness movement tracking
+                    </p>
+                </div>
+
+                <div class="connection">
+                    <span class="status-dot"></span>
+                    Online
+                </div>
+
+            </header>
+
+
+            <!-- Video Area -->
+            <section class="video-card">
+
+                <div class="video-header">
+
+                    <div>
+                        <h2>Live Analysis</h2>
+                        <p id="videoStatus">
+                            Camera is currently stopped
+                        </p>
+                    </div>
+
+                    <div class="live-badge" id="liveBadge">
+                        ● LIVE
+                    </div>
+
+                </div>
+
+
+                <div class="video-container">
+
+                    <!-- Webcam -->
+                    <video
+                        id="camera"
+                        autoplay
+                        playsinline
+                        muted
+                    ></video>
+
+                    <!-- Uploaded image -->
+                    <img
+                        id="uploadedImage"
+                        alt="Uploaded analysis"
+                    >
+
+                    <!-- Canvas for AI overlay -->
+                    <canvas id="overlayCanvas"></canvas>
+
+
+                    <!-- Initial message -->
+                    <div id="cameraPlaceholder" class="camera-placeholder">
+
+                        <div class="camera-icon">
+                            📷
+                        </div>
+
+                        <h2>Camera Ready</h2>
+
+                        <p>
+                            Click <b>Start Camera</b> to begin
+                            human activity recognition.
+                        </p>
+
+                    </div>
+
+
+                    <!-- HUD -->
+                    <div class="hud">
+
+                        <div class="hud-item">
+
+                            <span>ACTIVITY</span>
+
+                            <strong id="activityValue">
+                                WAITING
+                            </strong>
+
+                        </div>
+
+                        <div class="hud-item">
+
+                            <span>CONFIDENCE</span>
+
+                            <strong id="confidenceValue">
+                                --
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- Statistics -->
+            <section class="stats-grid">
+
+                <div class="stat-card">
+
+                    <div class="stat-icon">
+                        🔢
+                    </div>
+
+                    <div>
+
+                        <span>REPETITIONS</span>
+
+                        <strong id="repValue">
+                            0
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-icon">
+                        📐
+                    </div>
+
+                    <div>
+
+                        <span>JOINT ANGLE</span>
+
+                        <strong>
+                            <span id="angleValue">--</span>°
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-icon">
+                        🏋️
+                    </div>
+
+                    <div>
+
+                        <span>EXERCISE</span>
+
+                        <strong id="exerciseValue">
+                            Squat
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-icon">
+                        🧍
+                    </div>
+
+                    <div>
+
+                        <span>PERSON</span>
+
+                        <strong id="personValue">
+                            Not Detected
+                        </strong>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- Feedback -->
+            <section class="feedback-card">
+
+                <div class="feedback-title">
+
+                    <div class="feedback-icon">
+                        💬
+                    </div>
+
+                    <div>
+
+                        <h2>Form Feedback</h2>
+
+                        <p>AI-generated exercise guidance</p>
+
+                    </div>
+
+                </div>
+
+
+                <div id="feedbackMessage" class="feedback-message ready">
+
+                    Ready to analyze your movement.
+
+                </div>
+
+            </section>
+
+
+            <!-- Upload result -->
+            <section
+                id="uploadResult"
+                class="upload-result"
+            >
+
+                <h2>Image Analysis</h2>
+
+                <div id="uploadResultContent">
+                    No image analyzed yet.
+                </div>
+
+            </section>
+
+
+            <footer>
+
+                <p>
+                    AI Human Activity Recognition •
+                    YOLO Pose Analysis
+                </p>
+
+            </footer>
+
+        </main>
+
+    </div>
+
+
+    <script src="/static/app.js"></script>
+
+</body>
+</html>
