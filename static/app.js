@@ -1,73 +1,37 @@
 // ============================================
 // AI HUMAN ACTIVITY RECOGNITION
-// Frontend Controller
+// Frontend Controller - FIXED VERSION
 // ============================================
 
-
 const camera = document.getElementById("camera");
+const overlayCanvas = document.getElementById("overlayCanvas");
+const uploadedImage = document.getElementById("uploadedImage");
+const cameraPlaceholder = document.getElementById("cameraPlaceholder");
 
-const overlayCanvas =
-    document.getElementById("overlayCanvas");
+const startCameraBtn = document.getElementById("startCameraBtn");
+const stopCameraBtn = document.getElementById("stopCameraBtn");
+const imageInput = document.getElementById("imageInput");
+const exerciseSelect = document.getElementById("exerciseSelect");
 
-const uploadedImage =
-    document.getElementById("uploadedImage");
+const systemStatus = document.getElementById("systemStatus");
+const videoStatus = document.getElementById("videoStatus");
+const liveBadge = document.getElementById("liveBadge");
 
-const cameraPlaceholder =
-    document.getElementById("cameraPlaceholder");
+const activityValue = document.getElementById("activityValue");
+const confidenceValue = document.getElementById("confidenceValue");
+const repValue = document.getElementById("repValue");
+const angleValue = document.getElementById("angleValue");
+const exerciseValue = document.getElementById("exerciseValue");
+const personValue = document.getElementById("personValue");
 
-const startCameraBtn =
-    document.getElementById("startCameraBtn");
+const feedbackMessage = document.getElementById("feedbackMessage");
 
-const stopCameraBtn =
-    document.getElementById("stopCameraBtn");
-
-const imageInput =
-    document.getElementById("imageInput");
-
-const exerciseSelect =
-    document.getElementById("exerciseSelect");
-
-const systemStatus =
-    document.getElementById("systemStatus");
-
-const videoStatus =
-    document.getElementById("videoStatus");
-
-const liveBadge =
-    document.getElementById("liveBadge");
-
-const activityValue =
-    document.getElementById("activityValue");
-
-const confidenceValue =
-    document.getElementById("confidenceValue");
-
-const repValue =
-    document.getElementById("repValue");
-
-const angleValue =
-    document.getElementById("angleValue");
-
-const exerciseValue =
-    document.getElementById("exerciseValue");
-
-const personValue =
-    document.getElementById("personValue");
-
-const feedbackMessage =
-    document.getElementById("feedbackMessage");
-
-const uploadResult =
-    document.getElementById("uploadResult");
-
+const uploadResult = document.getElementById("uploadResult");
 const uploadResultContent =
     document.getElementById("uploadResultContent");
 
-
 let cameraStream = null;
-
 let cameraRunning = false;
-
 let analysisTimer = null;
 
 
@@ -76,61 +40,90 @@ let analysisTimer = null;
 // ============================================
 
 const exerciseNames = {
-
     squat: "Squat",
-
     bicep_curl: "Bicep Curl",
-
     shoulder_press: "Shoulder Press"
-
 };
+
+
+// ============================================
+// CHECK ELEMENTS
+// ============================================
+
+console.log("HAR frontend loaded");
+
+if (!activityValue) {
+    console.error("Missing #activityValue");
+}
+
+if (!confidenceValue) {
+    console.error("Missing #confidenceValue");
+}
+
+if (!personValue) {
+    console.error("Missing #personValue");
+}
+
+if (!imageInput) {
+    console.error("Missing #imageInput");
+}
 
 
 // ============================================
 // EXERCISE SELECTOR
 // ============================================
 
-exerciseSelect.addEventListener(
-    "change",
-    function () {
+if (exerciseSelect) {
 
-        const exercise =
-            exerciseNames[this.value];
+    exerciseSelect.addEventListener(
+        "change",
+        function () {
 
-        exerciseValue.textContent =
-            exercise;
+            const exercise =
+                exerciseNames[this.value] ||
+                formatExerciseName(this.value);
 
-        // Reset UI counters
-        repValue.textContent = "0";
+            if (exerciseValue) {
+                exerciseValue.textContent = exercise;
+            }
 
-        angleValue.textContent = "--";
+            if (repValue) {
+                repValue.textContent = "0";
+            }
 
-        feedbackMessage.textContent =
-            `${exercise} selected. Ready to analyze.`;
+            if (angleValue) {
+                angleValue.textContent = "--";
+            }
 
-        feedbackMessage.className =
-            "feedback-message ready";
-
-    }
-);
+            showFeedback(
+                `${exercise} selected. Ready to analyze.`,
+                "ready"
+            );
+        }
+    );
+}
 
 
 // ============================================
 // START CAMERA
 // ============================================
 
-startCameraBtn.addEventListener(
-    "click",
-    startCamera
-);
+if (startCameraBtn) {
+    startCameraBtn.addEventListener(
+        "click",
+        startCamera
+    );
+}
 
 
 async function startCamera() {
 
     try {
 
-        if (!navigator.mediaDevices ||
-            !navigator.mediaDevices.getUserMedia) {
+        if (
+            !navigator.mediaDevices ||
+            !navigator.mediaDevices.getUserMedia
+        ) {
 
             showFeedback(
                 "Camera access is not supported by this browser.",
@@ -157,41 +150,42 @@ async function startCamera() {
                 },
 
                 audio: false
-
             });
 
 
-        camera.srcObject =
-            cameraStream;
+        if (camera) {
+            camera.srcObject = cameraStream;
+            camera.style.display = "block";
+        }
 
-        camera.style.display =
-            "block";
+        if (uploadedImage) {
+            uploadedImage.style.display = "none";
+        }
 
-        uploadedImage.style.display =
-            "none";
+        if (cameraPlaceholder) {
+            cameraPlaceholder.style.display = "none";
+        }
 
-        cameraPlaceholder.style.display =
-            "none";
+        if (liveBadge) {
+            liveBadge.style.display = "block";
+        }
 
-        liveBadge.style.display =
-            "block";
+        if (systemStatus) {
+            systemStatus.textContent = "Camera Active";
+        }
 
-        systemStatus.textContent =
-            "Camera Active";
-
-        videoStatus.textContent =
-            "Live camera analysis running";
+        if (videoStatus) {
+            videoStatus.textContent =
+                "Live camera analysis running";
+        }
 
         cameraRunning = true;
-
 
         showFeedback(
             "Camera started. Position your full body inside the frame.",
             "ready"
         );
 
-
-        // Start sending frames
         startFrameAnalysis();
 
     }
@@ -207,9 +201,7 @@ async function startCamera() {
             "Unable to access camera. Please allow camera permission.",
             "error"
         );
-
     }
-
 }
 
 
@@ -217,10 +209,12 @@ async function startCamera() {
 // STOP CAMERA
 // ============================================
 
-stopCameraBtn.addEventListener(
-    "click",
-    stopCamera
-);
+if (stopCameraBtn) {
+    stopCameraBtn.addEventListener(
+        "click",
+        stopCamera
+    );
+}
 
 
 function stopCamera() {
@@ -235,7 +229,6 @@ function stopCamera() {
         );
 
         analysisTimer = null;
-
     }
 
 
@@ -248,43 +241,47 @@ function stopCamera() {
             );
 
         cameraStream = null;
-
     }
 
 
-    camera.srcObject = null;
+    if (camera) {
+        camera.srcObject = null;
+        camera.style.display = "none";
+    }
 
-    camera.style.display =
-        "none";
+    if (liveBadge) {
+        liveBadge.style.display = "none";
+    }
 
-    liveBadge.style.display =
-        "none";
+    if (cameraPlaceholder) {
+        cameraPlaceholder.style.display = "flex";
+    }
 
-    cameraPlaceholder.style.display =
-        "flex";
+    if (systemStatus) {
+        systemStatus.textContent = "System Ready";
+    }
 
-    systemStatus.textContent =
-        "System Ready";
+    if (videoStatus) {
+        videoStatus.textContent =
+            "Camera is currently stopped";
+    }
 
-    videoStatus.textContent =
-        "Camera is currently stopped";
+    if (activityValue) {
+        activityValue.textContent = "WAITING";
+    }
 
+    if (confidenceValue) {
+        confidenceValue.textContent = "--";
+    }
 
-    activityValue.textContent =
-        "WAITING";
-
-    confidenceValue.textContent =
-        "--";
-
-    personValue.textContent =
-        "Not Detected";
-
+    if (personValue) {
+        personValue.textContent = "Not Detected";
+    }
 
     showFeedback(
         "Camera stopped.",
         "ready"
     );
-
 }
 
 
@@ -292,10 +289,13 @@ function stopCamera() {
 // IMAGE UPLOAD
 // ============================================
 
-imageInput.addEventListener(
-    "change",
-    handleImageUpload
-);
+if (imageInput) {
+
+    imageInput.addEventListener(
+        "change",
+        handleImageUpload
+    );
+}
 
 
 async function handleImageUpload(event) {
@@ -309,6 +309,14 @@ async function handleImageUpload(event) {
     }
 
 
+    console.log("================================");
+    console.log("IMAGE UPLOAD STARTED");
+    console.log("File:", file.name);
+    console.log("Type:", file.type);
+    console.log("Size:", file.size);
+    console.log("================================");
+
+
     // Stop webcam if running
     if (cameraRunning) {
         stopCamera();
@@ -319,25 +327,29 @@ async function handleImageUpload(event) {
         URL.createObjectURL(file);
 
 
-    uploadedImage.src =
-        imageURL;
+    if (uploadedImage) {
+        uploadedImage.src = imageURL;
+        uploadedImage.style.display = "block";
+    }
 
-    uploadedImage.style.display =
-        "block";
+    if (camera) {
+        camera.style.display = "none";
+    }
 
-    camera.style.display =
-        "none";
-
-    cameraPlaceholder.style.display =
-        "none";
-
-
-    uploadResult.style.display =
-        "block";
+    if (cameraPlaceholder) {
+        cameraPlaceholder.style.display = "none";
+    }
 
 
-    uploadResultContent.textContent =
-        "Analyzing image...";
+    if (uploadResult) {
+        uploadResult.style.display = "block";
+    }
+
+
+    if (uploadResultContent) {
+        uploadResultContent.textContent =
+            "Analyzing image...";
+    }
 
 
     showFeedback(
@@ -356,13 +368,25 @@ async function handleImageUpload(event) {
 
     formData.append(
         "exercise",
-        exerciseSelect.value
+        exerciseSelect
+            ? exerciseSelect.value
+            : "squat"
     );
 
 
+    // ========================================
+    // API REQUEST
+    // ========================================
+
+    let response;
+
     try {
 
-        const response =
+        console.log(
+            "Sending POST /analyze-image"
+        );
+
+        response =
             await fetch(
                 "/analyze-image",
                 {
@@ -371,73 +395,271 @@ async function handleImageUpload(event) {
                 }
             );
 
+    }
 
-        if (!response.ok) {
+    catch (error) {
 
-            throw new Error(
-                `Server returned ${response.status}`
-            );
-
-        }
-
-
-        const result =
-            await response.json();
-
-
-        updateAnalysisUI(
-            result
+        console.error(
+            "NETWORK ERROR:",
+            error
         );
 
+        if (uploadResultContent) {
+            uploadResultContent.textContent =
+                "Unable to connect to the analysis server.";
+        }
 
-        uploadResultContent.innerHTML = `
+        showFeedback(
+            "Could not connect to the AI server.",
+            "error"
+        );
 
-            <div>
-                <strong>Activity:</strong>
-                ${escapeHTML(result.activity || "Unknown")}
-            </div>
+        return;
+    }
 
-            <div>
-                <strong>Exercise:</strong>
-                ${escapeHTML(result.exercise || "Unknown")}
-            </div>
 
-            <div>
-                <strong>Confidence:</strong>
-                ${formatConfidence(result.confidence)}
-            </div>
+    // ========================================
+    // CHECK HTTP RESPONSE
+    // ========================================
 
-            <div>
-                <strong>Angle:</strong>
-                ${result.angle ?? "--"}°
-            </div>
+    console.log(
+        "Server status:",
+        response.status
+    );
 
-            <div>
-                <strong>Feedback:</strong>
-                ${escapeHTML(result.feedback || "No feedback")}
-            </div>
 
-        `;
+    let rawResponse = "";
+
+    try {
+
+        rawResponse =
+            await response.text();
+
+        console.log(
+            "Raw server response:",
+            rawResponse
+        );
 
     }
 
     catch (error) {
 
         console.error(
-            "Upload analysis error:",
+            "Could not read server response:",
             error
         );
 
-
-        uploadResultContent.textContent =
-            "Image analysis failed.";
-
+        if (uploadResultContent) {
+            uploadResultContent.textContent =
+                "Could not read server response.";
+        }
 
         showFeedback(
-            "The server could not analyze this image yet.",
+            "The server response could not be read.",
             "error"
         );
 
+        return;
+    }
+
+
+    if (!response.ok) {
+
+        console.error(
+            "SERVER ERROR:",
+            response.status,
+            rawResponse
+        );
+
+        if (uploadResultContent) {
+            uploadResultContent.textContent =
+                `Server error (${response.status})`;
+        }
+
+        showFeedback(
+            `AI server returned error ${response.status}.`,
+            "error"
+        );
+
+        return;
+    }
+
+
+    // ========================================
+    // PARSE JSON
+    // ========================================
+
+    let result;
+
+    try {
+
+        result =
+            JSON.parse(rawResponse);
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "JSON PARSE ERROR:",
+            error
+        );
+
+        console.error(
+            "Server returned:",
+            rawResponse
+        );
+
+        if (uploadResultContent) {
+            uploadResultContent.textContent =
+                "The AI server returned an invalid response.";
+        }
+
+        showFeedback(
+            "The server responded, but the response format was invalid.",
+            "error"
+        );
+
+        return;
+    }
+
+
+    // ========================================
+    // SUCCESS
+    // ========================================
+
+    console.log(
+        "AI RESULT:",
+        result
+    );
+
+
+    // Update dashboard separately
+    try {
+
+        updateAnalysisUI(result);
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "UI UPDATE ERROR:",
+            error
+        );
+
+        showFeedback(
+            "AI analysis completed, but the dashboard could not be updated.",
+            "warning"
+        );
+    }
+
+
+    // ========================================
+    // DISPLAY IMAGE ANALYSIS RESULT
+    // ========================================
+
+    if (uploadResultContent) {
+
+        uploadResultContent.innerHTML = `
+
+            <div>
+                <strong>Activity:</strong>
+                ${escapeHTML(
+                    getActivityName(result)
+                )}
+            </div>
+
+            <div>
+                <strong>Exercise:</strong>
+                ${escapeHTML(
+                    result.exercise ||
+                    "Unknown"
+                )}
+            </div>
+
+            <div>
+                <strong>Confidence:</strong>
+                ${formatConfidence(
+                    result.activity_confidence ??
+                    result.confidence
+                )}
+            </div>
+
+            <div>
+                <strong>Angle:</strong>
+                ${
+                    result.angle !== null &&
+                    result.angle !== undefined
+                        ? Number(result.angle).toFixed(1)
+                        : "--"
+                }°
+            </div>
+
+            <div>
+                <strong>Person:</strong>
+                ${
+                    result.person_detected
+                        ? "Detected"
+                        : "Not Detected"
+                }
+            </div>
+
+            <div>
+                <strong>Feedback:</strong>
+                ${escapeHTML(
+                    result.feedback ||
+                    "No feedback available."
+                )}
+            </div>
+
+        `;
+    }
+
+
+    if (result.feedback) {
+
+        const feedback =
+            String(result.feedback)
+                .toLowerCase();
+
+        let feedbackClass = "ready";
+
+
+        if (
+            feedback.includes("good") ||
+            feedback.includes("correct") ||
+            feedback.includes("perfect") ||
+            feedback.includes("excellent")
+        ) {
+
+            feedbackClass = "good";
+        }
+
+        else if (
+            feedback.includes("lower") ||
+            feedback.includes("raise") ||
+            feedback.includes("adjust") ||
+            feedback.includes("warning")
+        ) {
+
+            feedbackClass = "warning";
+        }
+
+        else if (
+            feedback.includes("not") ||
+            feedback.includes("error") ||
+            feedback.includes("unable")
+        ) {
+
+            feedbackClass = "error";
+        }
+
+
+        showFeedback(
+            result.feedback,
+            feedbackClass
+        );
     }
 
 }
@@ -454,27 +676,35 @@ function startFrameAnalysis() {
         clearInterval(
             analysisTimer
         );
-
     }
 
 
-    // Send a frame approximately every 300 ms
     analysisTimer =
         setInterval(
             captureAndAnalyzeFrame,
-            300
+            500
         );
-
 }
 
 
 async function captureAndAnalyzeFrame() {
 
-    if (!cameraRunning ||
-        camera.readyState < 2) {
+    if (
+        !cameraRunning ||
+        !camera ||
+        camera.readyState < 2
+    ) {
 
         return;
+    }
 
+
+    if (
+        !camera.videoWidth ||
+        !camera.videoHeight
+    ) {
+
+        return;
     }
 
 
@@ -491,11 +721,8 @@ async function captureAndAnalyzeFrame() {
         );
 
 
-    canvas.width =
-        width;
-
-    canvas.height =
-        height;
+    canvas.width = width;
+    canvas.height = height;
 
 
     const context =
@@ -532,7 +759,9 @@ async function captureAndAnalyzeFrame() {
 
             formData.append(
                 "exercise",
-                exerciseSelect.value
+                exerciseSelect
+                    ? exerciseSelect.value
+                    : "squat"
             );
 
 
@@ -549,6 +778,12 @@ async function captureAndAnalyzeFrame() {
 
 
                 if (!response.ok) {
+
+                    console.error(
+                        "Frame API error:",
+                        response.status
+                    );
+
                     return;
                 }
 
@@ -557,10 +792,7 @@ async function captureAndAnalyzeFrame() {
                     await response.json();
 
 
-                updateAnalysisUI(
-                    result
-                );
-
+                updateAnalysisUI(result);
 
             }
 
@@ -570,14 +802,12 @@ async function captureAndAnalyzeFrame() {
                     "Frame analysis error:",
                     error
                 );
-
             }
 
         },
         "image/jpeg",
         0.7
     );
-
 }
 
 
@@ -592,54 +822,120 @@ function updateAnalysisUI(result) {
     }
 
 
-    activityValue.textContent =
-        (result.activity ||
-            "UNKNOWN").toUpperCase();
+    console.log(
+        "Updating UI with:",
+        result
+    );
 
 
-    confidenceValue.textContent =
-        formatConfidence(
-            result.confidence
-        );
+    // ========================================
+    // ACTIVITY
+    // ========================================
+
+    if (activityValue) {
+
+        activityValue.textContent =
+            getActivityName(result)
+                .toUpperCase();
+    }
 
 
-    repValue.textContent =
-        result.repetitions ??
-        result.reps ??
-        0;
+    // ========================================
+    // CONFIDENCE
+    // ========================================
+
+    if (confidenceValue) {
+
+        confidenceValue.textContent =
+            formatConfidence(
+                result.activity_confidence ??
+                result.confidence
+            );
+    }
 
 
-    angleValue.textContent =
-        result.angle ??
-        "--";
+    // ========================================
+    // REPETITIONS
+    // ========================================
+
+    if (repValue) {
+
+        repValue.textContent =
+            result.repetitions ??
+            result.reps ??
+            0;
+    }
 
 
-    if (result.exercise) {
+    // ========================================
+    // ANGLE
+    // ========================================
+
+    if (angleValue) {
+
+        if (
+            result.angle !== null &&
+            result.angle !== undefined &&
+            !Number.isNaN(
+                Number(result.angle)
+            )
+        ) {
+
+            angleValue.textContent =
+                Number(result.angle)
+                    .toFixed(1);
+
+        }
+
+        else {
+
+            angleValue.textContent =
+                "--";
+        }
+    }
+
+
+    // ========================================
+    // EXERCISE
+    // ========================================
+
+    if (
+        exerciseValue &&
+        result.exercise
+    ) {
 
         exerciseValue.textContent =
             formatExerciseName(
                 result.exercise
             );
-
     }
 
 
-    if (result.person_detected) {
+    // ========================================
+    // PERSON
+    // ========================================
 
-        personValue.textContent =
-            "Detected";
+    if (personValue) {
 
+        if (
+            result.person_detected === true
+        ) {
+
+            personValue.textContent =
+                "Detected";
+        }
+
+        else {
+
+            personValue.textContent =
+                "Not Detected";
+        }
     }
 
-    else if (
-        result.person_detected === false
-    ) {
 
-        personValue.textContent =
-            "Not Detected";
-
-    }
-
+    // ========================================
+    // FEEDBACK
+    // ========================================
 
     if (result.feedback) {
 
@@ -648,39 +944,37 @@ function updateAnalysisUI(result) {
 
 
         const feedback =
-            result.feedback.toLowerCase();
+            String(result.feedback)
+                .toLowerCase();
 
 
         if (
             feedback.includes("good") ||
             feedback.includes("correct") ||
-            feedback.includes("perfect")
+            feedback.includes("perfect") ||
+            feedback.includes("excellent")
         ) {
 
-            feedbackClass =
-                "good";
-
+            feedbackClass = "good";
         }
 
         else if (
             feedback.includes("lower") ||
             feedback.includes("raise") ||
-            feedback.includes("adjust")
+            feedback.includes("adjust") ||
+            feedback.includes("warning")
         ) {
 
-            feedbackClass =
-                "warning";
-
+            feedbackClass = "warning";
         }
 
         else if (
             feedback.includes("not") ||
-            feedback.includes("error")
+            feedback.includes("error") ||
+            feedback.includes("unable")
         ) {
 
-            feedbackClass =
-                "error";
-
+            feedbackClass = "error";
         }
 
 
@@ -688,9 +982,107 @@ function updateAnalysisUI(result) {
             result.feedback,
             feedbackClass
         );
-
     }
 
+}
+
+
+// ============================================
+// ACTIVITY NAME
+// ============================================
+
+function getActivityName(result) {
+
+    if (!result) {
+        return "Unknown";
+    }
+
+
+    const activity =
+        result.activity ||
+        result.predicted_activity ||
+        result.detected_activity ||
+        result.label ||
+        "Unknown";
+
+
+    return normalizeActivity(
+        String(activity)
+    );
+}
+
+
+// ============================================
+// NORMALIZE ACTIVITY
+// ============================================
+
+function normalizeActivity(activity) {
+
+    const value =
+        activity
+            .trim()
+            .toLowerCase()
+            .replaceAll("_", " ");
+
+
+    if (
+        value === "squat" ||
+        value === "squatting"
+    ) {
+
+        return "Squatting";
+    }
+
+
+    if (
+        value === "sit" ||
+        value === "sitting" ||
+        value === "seated"
+    ) {
+
+        return "Sitting";
+    }
+
+
+    if (
+        value === "stand" ||
+        value === "standing"
+    ) {
+
+        return "Standing";
+    }
+
+
+    if (
+        value === "lie" ||
+        value === "lying" ||
+        value === "lying down" ||
+        value === "laying"
+    ) {
+
+        return "Lying Down";
+    }
+
+
+    if (
+        value === "walking" ||
+        value === "walk"
+    ) {
+
+        return "Walking";
+    }
+
+
+    if (
+        value === "unknown" ||
+        value === "none"
+    ) {
+
+        return "Unknown";
+    }
+
+
+    return activity;
 }
 
 
@@ -703,17 +1095,22 @@ function showFeedback(
     type = "ready"
 ) {
 
+    if (!feedbackMessage) {
+        return;
+    }
+
+
     feedbackMessage.textContent =
         message;
 
+
     feedbackMessage.className =
         `feedback-message ${type}`;
-
 }
 
 
 // ============================================
-// HELPERS
+// FORMAT CONFIDENCE
 // ============================================
 
 function formatConfidence(
@@ -722,59 +1119,83 @@ function formatConfidence(
 
     if (
         confidence === undefined ||
-        confidence === null
+        confidence === null ||
+        confidence === ""
     ) {
 
         return "--";
-
     }
 
 
-    let value =
+    const value =
         Number(confidence);
 
 
     if (Number.isNaN(value)) {
-
         return "--";
-
     }
 
 
-    if (value <= 1) {
+    const percentage =
+        value <= 1
+            ? value * 100
+            : value;
 
-        value *= 100;
 
-    }
-
-
-    return `${value.toFixed(1)}%`;
-
+    return `${percentage.toFixed(1)}%`;
 }
 
+
+// ============================================
+// FORMAT EXERCISE NAME
+// ============================================
 
 function formatExerciseName(
     exercise
 ) {
 
-    return exercise
-        .replaceAll("_", " ")
-        .replace(/\b\w/g,
-            letter => letter.toUpperCase()
-        );
+    if (!exercise) {
+        return "Unknown";
+    }
 
+
+    return String(exercise)
+        .replaceAll("_", " ")
+        .replace(
+            /\b\w/g,
+            letter =>
+                letter.toUpperCase()
+        );
 }
 
+
+// ============================================
+// ESCAPE HTML
+// ============================================
 
 function escapeHTML(value) {
 
     return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-
+        .replaceAll(
+            "&",
+            "&amp;"
+        )
+        .replaceAll(
+            "<",
+            "&lt;"
+        )
+        .replaceAll(
+            ">",
+            "&gt;"
+        )
+        .replaceAll(
+            '"',
+            "&quot;"
+        )
+        .replaceAll(
+            "'",
+            "&#039;"
+        );
 }
 
 
@@ -793,8 +1214,35 @@ window.addEventListener(
                 .forEach(
                     track => track.stop()
                 );
-
         }
 
+    }
+);
+
+
+// ============================================
+// GLOBAL ERROR LOGGING
+// ============================================
+
+window.addEventListener(
+    "error",
+    function (event) {
+
+        console.error(
+            "GLOBAL JAVASCRIPT ERROR:",
+            event.error || event.message
+        );
+    }
+);
+
+
+window.addEventListener(
+    "unhandledrejection",
+    function (event) {
+
+        console.error(
+            "UNHANDLED PROMISE ERROR:",
+            event.reason
+        );
     }
 );
