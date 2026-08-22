@@ -1,8 +1,8 @@
 fastapi
 uvicorn[standard]
 python-multipart
-opencv-python-headless
 numpy
 jinja2
 pillow
+opencv-python-headless
 ultralytics
