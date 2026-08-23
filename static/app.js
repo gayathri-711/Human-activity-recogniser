@@ -379,6 +379,8 @@ async function handleImageUpload(event) {
     // ========================================
 
     let response;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
     try {
 
@@ -391,26 +393,35 @@ async function handleImageUpload(event) {
                 "/analyze-image",
                 {
                     method: "POST",
-                    body: formData
+                    body: formData,
+                    signal: controller.signal
                 }
             );
+
+        clearTimeout(timeoutId);
 
     }
 
     catch (error) {
+        clearTimeout(timeoutId);
 
         console.error(
             "NETWORK ERROR:",
             error
         );
 
+        let errorMsg = "Could not connect to the AI server.";
+        if (error.name === 'AbortError') {
+            errorMsg = "Request timed out. The server might be waking up or overloaded.";
+        }
+
         if (uploadResultContent) {
             uploadResultContent.textContent =
-                "Unable to connect to the analysis server.";
+                errorMsg;
         }
 
         showFeedback(
-            "Could not connect to the AI server.",
+            errorMsg,
             "error"
         );
 

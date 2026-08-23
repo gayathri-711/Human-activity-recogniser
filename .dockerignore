@@ -1,0 +1,7 @@
+har_env/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+.vscode/
+.env
