@@ -6,6 +6,9 @@
 
     <title>AI Human Activity Recognition</title>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 
@@ -48,18 +51,31 @@
 
             </div>
 
+            <div class="instructions">
+                <div class="instructions-header">
+                    <span class="icon">💡</span>
+                    <h3>How to use</h3>
+                </div>
+                <ol>
+                    <li>Select an exercise from the dropdown.</li>
+                    <li>Start your camera or upload an image.</li>
+                    <li>Ensure your full body is visible.</li>
+                    <li>Perform the exercise to see AI feedback.</li>
+                </ol>
+            </div>
+
             <div class="sidebar-buttons">
 
                 <button id="startCameraBtn" class="primary-btn">
-                    📷 Start Camera
+                    <span class="btn-icon">📷</span> Start Camera
                 </button>
 
                 <button id="stopCameraBtn" class="secondary-btn">
-                    ⏹ Stop Camera
+                    <span class="btn-icon">⏹</span> Stop Camera
                 </button>
 
                 <label for="imageInput" class="upload-btn">
-                    🖼 Upload Image
+                    <span class="btn-icon">🖼</span> Upload Image
                 </label>
 
                 <input
@@ -68,20 +84,6 @@
                     accept="image/png,image/jpeg,image/jpg,image/webp"
                     hidden
                 >
-
-            </div>
-
-            <div class="instructions">
-
-                <h3>How to use</h3>
-
-                <ol>
-                    <li>Select an exercise.</li>
-                    <li>Start your camera.</li>
-                    <li>Stand where your body is visible.</li>
-                    <li>Perform the exercise.</li>
-                    <li>Watch your repetitions and feedback.</li>
-                </ol>
 
             </div>
 
@@ -194,6 +196,20 @@
             </section>
 
 
+            <!-- Upload result (Moved below video container) -->
+            <section
+                id="uploadResult"
+                class="upload-result"
+            >
+                <div class="upload-result-header">
+                    <div class="upload-icon">✨</div>
+                    <h2>Image Analysis Results</h2>
+                </div>
+                <div id="uploadResultContent" class="upload-result-content">
+                    No image analyzed yet.
+                </div>
+            </section>
+
             <!-- Statistics -->
             <section class="stats-grid">
 
@@ -304,19 +320,7 @@
             </section>
 
 
-            <!-- Upload result -->
-            <section
-                id="uploadResult"
-                class="upload-result"
-            >
 
-                <h2>Image Analysis</h2>
-
-                <div id="uploadResultContent">
-                    No image analyzed yet.
-                </div>
-
-            </section>
 
 
             <footer>
